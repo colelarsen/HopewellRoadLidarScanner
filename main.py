@@ -187,22 +187,115 @@ async def main_fetch():
             results = await asyncio.gather(*tasks)
 
 
+def show_hillshade(wbt, input, output):
+    wbt.hillshade(input, output, azimuth=120, altitude=35)
+
+    geemap.add_crs(output,
+                epsg=4326)
+    
+    # Read the raster using rioxarray
+    idw_dem = rxr.open_rasterio(output)
+    
+
+
+    # View the raster
+    ep.plot_bands(
+        idw_dem,
+        cbar=True,
+        cmap="gray",
+        title="Hillshade made from DTM",
+        figsize=(12, 12),
+        vmin=15000
+    )
+
+    plt.show();
+
+def show_horizon_angle(wbt, input, output):
+    wbt.horizon_angle(
+    input, 
+    output, 
+    azimuth=120, 
+    max_dist=45)
+
+    geemap.add_crs(output,
+                epsg=4326)
+    
+    # Read the raster using rioxarray
+    idw_dem = rxr.open_rasterio(output)
+    
+
+
+    # View the raster
+    ep.plot_bands(
+        idw_dem,
+        cbar=True,
+        cmap="gray",
+        title="Horizon Angle made from DTM",
+        figsize=(12, 12),
+        vmin=-10,
+        vmax=10
+    )
+
+    plt.show();
+
+def show_directional_relief(wbt, input, output):
+    wbt.directional_relief(
+    input, 
+    output, 
+    azimuth=120, 
+    max_dist=None
+)
+
+    geemap.add_crs(output,
+                epsg=4326)
+    
+    # Read the raster using rioxarray
+    idw_dem = rxr.open_rasterio(output)
+    
+
+
+    # View the raster
+    ep.plot_bands(
+        idw_dem,
+        cbar=True,
+        cmap="gray",
+        title="Directional Relief made from DTM",
+        figsize=(12, 12),
+        vmin=-10,
+        vmax=10
+    )
+
+    plt.show();
+
+def show_elev_relative_to_min_max(wbt, input, output):
+    wbt.elev_relative_to_min_max(
+    input, 
+    output)
+
+    geemap.add_crs(output,
+                epsg=4326)
+    
+    # Read the raster using rioxarray
+    idw_dem = rxr.open_rasterio(output)
+    
+
+
+    # View the raster
+    ep.plot_bands(
+        idw_dem,
+        cbar=True,
+        cmap="gray",
+        title="Elev Relative to Min Max made from DTM",
+        figsize=(12, 12)
+    )
+
+    plt.show();
+
 
 
 def main():
     wbt = whitebox.WhiteboxTools()
-
-    # For type of returns, see this article: https://pro.arcgis.com/en/pro-app/3.1/help/data/las-dataset/what-is-lidar-.htm
-    # wbt.lidar_contour(
-    #     i="C:/Users/Cole/Downloads/lidar/USGS_LPC_OH_Statewide_Phase2_2020_B20_BS19800738.laz",
-    #     output="C:/Users/Cole/Downloads/lidar/output/colorad_laz_info.tif",
-    #     parameter="elevation",
-    #     returns="last",
-    #     resolution=1,
-    #     exclude_cls="5, 6" # We want to exclude the classes of unclassified, High Vegetation and Building respectively
-    # )
-    i="C:/Users/Cole/Downloads/lidar/USGS_LPC_OH_Statewide_Phase2_2020_B20_BS19780738.laz"
-    i_parsed="C:/Users/Cole/Downloads/lidar/output/parsed.laz"
+    i="C:/Users/Cole/Downloads/lidar/USGS_LPC_OH_Statewide_Phase2_2020_B20_BS19800738.laz"
     off_ground_objects="C:/Users/Cole/Downloads/lidar/output/off_ground_objects.laz"
 
     dem="C:/Users/Cole/Downloads/lidar/output/modified.tif"
@@ -211,6 +304,7 @@ def main():
     final_output_2="C:/Users/Cole/Downloads/lidar/output/colorad_laz_info_2.tif"
 
 
+    #Get off ground points
     wbt.lidar_ground_point_filter(
     i, 
     off_ground_objects, 
@@ -223,15 +317,6 @@ def main():
     height_above_ground=True, 
     )
 
-    # wbt.lidar_remove_outliers(
-    # i, 
-    # i_parsed, 
-    # radius=5.0, 
-    # elev_diff=10.0, 
-    # use_median=False, 
-    # classify=True
-    # )
-
     # Now, create DEM from IDW interpolation
     print("Interpolating DEM...")
     wbt.lidar_idw_interpolation(
@@ -241,8 +326,7 @@ def main():
     returns="all",
     resolution=1.0,
     weight=1.0,
-    radius=2.5,
-    # exclude_cls='3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18' # Exclude non-ground points
+    radius=2.5
     )
 
     # Now, create DEM from IDW interpolation
@@ -254,61 +338,32 @@ def main():
     returns="all",
     resolution=1.0,
     weight=1.0,
-    radius=2.5,
-    # exclude_cls='3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18' # Exclude non-ground points
+    radius=2.5
     )
 
     
-
+    # Subtract off-ground DEM from original DEM to get ground-only DEM
     wbt.subtract(dem, dem_offground,
              output=final_output)
     
-    # wbt.directional_relief(
-    # final_output, 
-    # final_output_2, 
-    # azimuth=180, 
-    # max_dist=None
-# )
     
-    # wbt.hillshade(final_output, final_output_2, azimuth=0, altitude=45)
+    #Hillshade is best so far imo
+    show_hillshade(wbt, final_output, final_output_2)
 
-    # wbt.maximal_curvature(final_output, final_output_2, log=True, 
-    # zfactor=None)
+    #Horizon angle is good
+    # show_horizon_angle(wbt, final_output, final_output_2)
 
-    wbt.horizon_angle(
-    final_output, 
-    final_output_2, 
-    azimuth=120, 
-    max_dist=40.0)
+    #Directional relief is not great
+    # show_directional_relief(wbt, final_output, final_output_2)
 
-
-    
-
-    # Assign a CRS
-    # We will use geemap for this
-    geemap.add_crs(final_output_2,
-                epsg=4326)
-    
-    # Read the raster using rioxarray
-    idw_dem = rxr.open_rasterio(final_output_2)
-    
+    #elev_relative_to_min_max was decent
+    # show_elev_relative_to_min_max(wbt, final_output, final_output_2)
 
 
-    # View the raster
-    ep.plot_bands(
-        idw_dem,
-        cbar=True,
-        cmap="gray",
-        title="Hillshade made from DTM",
-        figsize=(12, 12),
-        vmin = 0,
-        vmax = 5
-    )
-
-    plt.show();
-
-
-# if __name__ == '__main__':
-#     asyncio.run(main_fetch())
 
 main()
+
+
+#Uncomment below to run async fetch for grabbing LIDAR data
+# if __name__ == '__main__':
+#     asyncio.run(main_fetch())
